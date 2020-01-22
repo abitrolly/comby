@@ -44,7 +44,7 @@ let%expect_test "regex_holes_empty_string_terminates" =
   let rewrite_template = {|(:[x])|} in
 
   run (module Matchers.Generic) source match_template rewrite_template;
-  [%expect_exact {|No matches.|}]
+  [%expect_exact {|()()()()()|}]
 
 let%expect_test "regex_holes_repetition_takes_precedence" =
   let source = {|foobar()|} in
@@ -76,8 +76,7 @@ let%expect_test "regex_holes_dot_star_ok_and_this_is_for_newline" =
   let rewrite_template = {|(:[x])|} in
 
   run (module Matchers.Generic) source match_template rewrite_template;
-  [%expect_exact {|(foo())
-(bar())|}]
+  [%expect_exact {|(foo())()(ar())|}]
 
 let%expect_test "regex_holes_optional" =
   let source = "nonovember no november no vember" in
@@ -93,7 +92,7 @@ let%expect_test "regex_holes_optional_spaces" =
   let rewrite_template = {|(:[x])|} in
 
   run (module Matchers.Generic) source match_template rewrite_template;
-  [%expect_exact {|nonovember no november (vember)|}]
+  [%expect_exact {|nonovember ()ovember (vember)|}]
 
 (* Note: this behavior does _not_ allow (optional)? to match empty string to sat
    template. It would be nice if it did but it's not straightforward. The \s*?
@@ -112,7 +111,15 @@ let%expect_test "regex_holes_optional_doesnt_work_outside_regex" =
   let rewrite_template = {|(:[x])|} in
 
   run (module Matchers.Generic) source match_template rewrite_template;
-  [%expect_exact {|No matches.|}]
+  [%expect_exact {|()()()()()()()()()()()()()()|}];
+
+  let source = "foo bar foobar" in
+  let match_template = {|:[x~\s*]|} in
+  let rewrite_template = {|(:[x])|} in
+
+  run (module Matchers.Generic) source match_template rewrite_template;
+  [%expect_exact {|()()()( )()()()( )()()()()()()|}]
+
 
 let%expect_test "regex_holes_optional_strip_no_from_november_outside_regex" =
   let source = "nonovember no november no vember" in
@@ -120,7 +127,7 @@ let%expect_test "regex_holes_optional_strip_no_from_november_outside_regex" =
   let rewrite_template = {|(:[x])|} in
 
   run (module Matchers.Generic) source match_template rewrite_template;
-  [%expect_exact {|no(vember) no (vember) no vember|}]
+  [%expect_exact {|()ovember ()(vember) ()vember|}]
 
 let%expect_test "regex_holes_optional_strip_no_from_november_inside_regex" =
   let source = "nonovember no november no vember" in
@@ -142,9 +149,4 @@ let%expect_test "leading_indentation" =
   let rewrite_template = {|(:[x])|} in
 
   run (module Matchers.Generic) source match_template rewrite_template;
-  [%expect_exact {|
-(     )a
-(  )b
-(           )c
-(     )d
-|}]
+  [%expect_exact {|()(    )()()( )()()(          )()()(    )()()|}]

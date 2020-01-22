@@ -578,15 +578,26 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                      (* (eof >>= fun _ ->
                         Format.printf "ZERO@.";
                         zero) *)
-                     (char '\n' >>= fun _ -> zero) (* make it line based *)
+                     (char '\n' >>= fun _ -> if debug then Format.printf "failboat@."; return "") (* make it line based *)
                    ; regexp_parser
                    ]
 
                 )
                 >>= fun result ->
                 if String.(result = "") then
-                  (if debug then Format.printf "Regex empty string matches@.";
-                   zero)
+                  (* this regex succeeded parsing the empty string *)
+                  (if debug then Format.printf "Regex empty string matches@."; (* this is OK if it won't repeat *)
+                   (if debug then Format.printf "1.";
+                    let advance_it p = fun s -> p (advance_state s 1) in
+                    choice
+                      [ (is_not eof >>= fun _ -> return []) (* advance if you can *)
+                      ; (advance_it (attempt (is_not eof)) >>= fun _ -> return []) (* advance if you can *)
+                      ; return [] (* if you can't, succeed on empty string. this is the end of the file *)
+                      ]
+                   )
+                   (* return [result] *)
+                   (*zero*) (* terminate if there is no suffix parser *)
+                  )
                 else
                   (if debug then Format.printf "Regex success: %s@." result;
                    return [result])
